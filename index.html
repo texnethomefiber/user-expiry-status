@@ -1,184 +1,155 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TEXNET PPPoE User Dashboard</title>
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f5f5f5;
-      padding: 20px;
-    }
-    h1 {
-      color: #333;
-      text-align: center;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-    }
-    th, td {
-      padding: 10px;
-      border: 1px solid #ccc;
-      text-align: left;
-    }
-    th {
-      background-color: #0066cc;
-      color: white;
-      cursor: pointer;
-    }
-    tr.expired {
-      background-color: #ffdddd;
-    }
-    tr.expiring {
-      background-color: #fff6cc;
-    }
-    tr.active {
-      background-color: #ddffdd;
-    }
-    .summary {
-      margin-top: 30px;
-    }
-    .summary h3 {
-      margin-bottom: 5px;
-    }
-    #searchBox {
-      margin-top: 20px;
-      margin-bottom: 10px;
-      padding: 8px;
-      width: 100%;
-      font-size: 16px;
-    }
-    #exportBtn {
-      margin-top: 10px;
-      padding: 10px 20px;
-      background-color: #28a745;
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f9f9f9; }
+    h2 { color: #333; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { padding: 8px 12px; border: 1px solid #ccc; text-align: left; }
+    th { cursor: pointer; background: #eee; }
+    tr:nth-child(even) { background: #f2f2f2; }
+    .expired { background: #ffe6e6; }
+    .expiring { background: #fff7cc; }
+    .active { background: #e6ffe6; }
+    #summary { margin-top: 20px; }
+    #filterInput { padding: 8px; width: 250px; margin-bottom: 10px; }
+    #exportBtn { padding: 8px 12px; margin-left: 10px; }
   </style>
 </head>
 <body>
-  <h1>TEXNET HOME FIBER - PPPoE User Dashboard</h1>
-  <input type="text" id="searchBox" placeholder="Search by any column...">
+  <h2>User Dashboard</h2>
+  <input type="text" id="filterInput" placeholder="Search users...">
   <button id="exportBtn">Export Filtered View</button>
-  <div id="summary" class="summary"></div>
-  <table id="userTable">
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Phone</th>
-        <th>Amount</th>
-        <th>Location</th>
-        <th>Payment Date</th>
-        <th>Expiry Date</th>
-        <th>Status</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+  <div id="summary"></div>
+  <table id="userTable"></table>
 
   <script>
-    const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQQvwH72sBpfyaBheSCdEdnlqq3b7l4YMzA_-6-k06624D2yc3ko0vUVgh5taJzyPsqFN9kqWNVgMQk/pub?gid=0&single=true&output=csv";
+    const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQQvwH72sBpfyaBheSCdEdnlqq3b7l4YMzA_-6-k06624D2yc3ko0vUVgh5taJzyPsqFN9kqWNVgMQk/pub?gid=0&single=true&output=csv';
 
-    function cleanAmount(value) {
-      return parseFloat(value.replace(/Ksh|,|\s|\"/g, "")) || 0;
+    function parseAmount(str) {
+      if (!str) return 0;
+      return parseFloat(str.replace(/[A-Za-zKsh\s,\"]+/g, '').trim()) || 0;
     }
 
-    function formatDate(dateStr) {
-      const date = new Date(dateStr.replace(/\//g, "-"));
-      return isNaN(date.getTime()) ? null : date;
+    function isValidDate(d) {
+      return d instanceof Date && !isNaN(d);
     }
 
-    function loadDashboard() {
-      Papa.parse(SHEET_URL, {
-        download: true,
-        header: true,
-        complete: function(results) {
-          const data = results.data;
-          const now = new Date();
-          const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-          let summary = {};
-
-          const tbody = document.querySelector("#userTable tbody");
-          tbody.innerHTML = "";
-
-          data.forEach(row => {
-            const expiry = formatDate(row["Expiry Date"]);
-            const amount = cleanAmount(row["Amount"]);
-            const tr = document.createElement("tr");
-
-            let status = "Active";
-            if (!expiry || expiry < now) {
-              status = "Expired";
-              tr.classList.add("expired");
-            } else if (expiry <= tomorrow) {
-              status = "Expiring Soon";
-              tr.classList.add("expiring");
-            } else {
-              tr.classList.add("active");
+    function loadCSV() {
+      fetch(sheetUrl)
+        .then(res => res.text())
+        .then(csv => {
+          Papa.parse(csv, {
+            header: true,
+            skipEmptyLines: true,
+            complete: function(results) {
+              displayUsers(results.data);
             }
-
-            tr.innerHTML = `
-              <td>${row["Name"]}</td>
-              <td>${row["Phone"]}</td>
-              <td>${row["Amount"]}</td>
-              <td>${row["Location"]}</td>
-              <td>${row["Payment Date"]}</td>
-              <td>${row["Expiry Date"]}</td>
-              <td>${status}</td>
-            `;
-
-            tbody.appendChild(tr);
-
-            const loc = row["Location"].trim() || "Unknown";
-            summary[loc] = summary[loc] || { users: 0, total: 0 };
-            summary[loc].users++;
-            summary[loc].total += amount;
           });
+        });
+    }
 
-          const summaryDiv = document.getElementById("summary");
-          summaryDiv.innerHTML = "<h2>Summary by Location</h2>" + Object.keys(summary).map(loc => {
-            return `<h3>${loc}</h3><p>Users: ${summary[loc].users} | Total Amount: Ksh ${summary[loc].total.toLocaleString()}</p>`;
-          }).join("");
+    function displayUsers(data) {
+      const table = document.getElementById('userTable');
+      const now = new Date();
+      const soon = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
-          applySearchFilter();
+      let html = '<thead><tr>';
+      const keys = Object.keys(data[0]);
+      keys.forEach(key => html += `<th>${key}</th>`);
+      html += '<th>Status</th></tr></thead><tbody>';
+
+      let totalAmount = 0;
+      let userCount = 0;
+      let locationMap = {};
+
+      data.forEach(row => {
+        const expiryStr = row['Expiry Date'];
+        const expiryDate = new Date(expiryStr);
+        const amount = parseAmount(row['Amount']);
+
+        let status = 'Active';
+        let rowClass = 'active';
+
+        if (!isValidDate(expiryDate)) {
+          status = 'Unknown';
+        } else if (expiryDate < now) {
+          status = 'Expired';
+          rowClass = 'expired';
+        } else if (expiryDate < soon) {
+          status = 'Expiring Soon';
+          rowClass = 'expiring';
         }
+
+        if (status !== 'Unknown') {
+          userCount++;
+          totalAmount += amount;
+          const location = row['Location'] || 'Unknown';
+          locationMap[location] = locationMap[location] || { count: 0, total: 0 };
+          locationMap[location].count++;
+          locationMap[location].total += amount;
+        }
+
+        html += `<tr class="${rowClass}">`;
+        keys.forEach(k => html += `<td>${row[k]}</td>`);
+        html += `<td>${status}</td></tr>`;
+      });
+
+      html += '</tbody>';
+      table.innerHTML = html;
+
+      document.getElementById('summary').innerHTML =
+        `<strong>Total Users:</strong> ${userCount} | <strong>Total Amount:</strong> Ksh ${totalAmount.toLocaleString()}<br><br>` +
+        Object.entries(locationMap).map(([loc, {count, total}]) =>
+          `${loc}: ${count} users — Ksh ${total.toLocaleString()}`
+        ).join('<br>');
+
+      document.querySelectorAll('th').forEach((th, i) => {
+        th.addEventListener('click', () => sortTable(i));
       });
     }
 
-    function applySearchFilter() {
-      const filter = document.getElementById("searchBox").value.toLowerCase();
-      const rows = document.querySelectorAll("#userTable tbody tr");
+    function sortTable(colIndex) {
+      const table = document.getElementById("userTable");
+      const rows = Array.from(table.rows).slice(1);
+      const dir = table.getAttribute('data-sort-dir') === 'asc' ? 'desc' : 'asc';
+      table.setAttribute('data-sort-dir', dir);
+      rows.sort((a, b) => {
+        const x = a.cells[colIndex].textContent.trim();
+        const y = b.cells[colIndex].textContent.trim();
+        return dir === 'asc' ? x.localeCompare(y) : y.localeCompare(x);
+      });
+      rows.forEach(r => table.appendChild(r));
+    }
+
+    document.getElementById('filterInput').addEventListener('input', function() {
+      const val = this.value.toLowerCase();
+      const rows = document.querySelectorAll('#userTable tbody tr');
       rows.forEach(row => {
-        const match = [...row.children].some(td => td.textContent.toLowerCase().includes(filter));
-        row.style.display = match ? "" : "none";
+        row.style.display = row.textContent.toLowerCase().includes(val) ? '' : 'none';
       });
-    }
+    });
 
-    function exportFilteredTable() {
-      const rows = Array.from(document.querySelectorAll("#userTable tbody tr"))
-        .filter(row => row.style.display !== "none")
-        .map(row => [...row.children].map(td => `"${td.textContent}"`).join(","));
-
-      const headers = [...document.querySelectorAll("#userTable thead th")].map(th => `"${th.textContent}"`).join(",");
-      const csv = [headers, ...rows].join("\n");
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      const rows = Array.from(document.querySelectorAll('#userTable tbody tr')).filter(r => r.style.display !== 'none');
+      let csv = Array.from(document.querySelectorAll('#userTable thead tr th')).map(th => th.textContent).join(',') + '\n';
+      rows.forEach(row => {
+        const cells = Array.from(row.cells).map(td => '"' + td.textContent.replace(/"/g, '""') + '"');
+        csv += cells.join(',') + '\n';
+      });
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement("a");
+      const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
-      link.download = "filtered_users.csv";
+      link.download = 'filtered_users.csv';
       link.click();
-    }
+    });
 
-    document.getElementById("searchBox").addEventListener("input", applySearchFilter);
-    document.getElementById("exportBtn").addEventListener("click", exportFilteredTable);
-
-    loadDashboard();
-    setInterval(loadDashboard, 5 * 60 * 1000); // auto-refresh every 5 minutes
+    loadCSV();
+    setInterval(loadCSV, 5 * 60 * 1000);
   </script>
 </body>
 </html>
