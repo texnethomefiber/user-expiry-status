@@ -70,11 +70,25 @@
         download: true,
         header: true,
         complete: function(results) {
-          const users = results.data;
+          let users = results.data;
           const table = document.querySelector("#userTable tbody");
           table.innerHTML = "";
 
           const locationsSet = new Set();
+
+          users = users.sort((a, b) => {
+            const aDateStr = a["Expiry Date"] || a["expiry date"] || a["expiry"] || "";
+            const bDateStr = b["Expiry Date"] || b["expiry date"] || b["expiry"] || "";
+
+            const aMatch = aDateStr.match(/(\d{2})[\/\-](\d{2})[\/\-](\d{4})\s+(\d{2}):(\d{2})(?::(\d{2}))?/);
+            const bMatch = bDateStr.match(/(\d{2})[\/\-](\d{2})[\/\-](\d{4})\s+(\d{2}):(\d{2})(?::(\d{2}))?/);
+            if (!aMatch || !bMatch) return 0;
+
+            const aIso = `${aMatch[3]}-${aMatch[2]}-${aMatch[1]}T${aMatch[4]}:${aMatch[5]}:${aMatch[6] || "00"}`;
+            const bIso = `${bMatch[3]}-${bMatch[2]}-${bMatch[1]}T${bMatch[4]}:${bMatch[5]}:${bMatch[6] || "00"}`;
+
+            return new Date(aIso) - new Date(bIso); // ascending order
+          });
 
           users.forEach(user => {
             const expiry = user["Expiry Date"] || user["expiry date"] || user["expiry"] || "";
