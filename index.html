@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>TEXNET HOME FIBER User Expiry Status Dashboard</title>
+  <title>TEXNET HOME FIBER - User Expiry Status Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <style>
     body {
@@ -13,9 +13,23 @@
       color: #333;
     }
 
-    h2 {
-      color: #2c3e50;
+    .header-box {
+      background: linear-gradient(135deg, #3498db, #2980b9);
+      color: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
       margin-bottom: 20px;
+    }
+
+    .header-box h1 {
+      margin: 0;
+      font-size: 28px;
+    }
+
+    .header-box p {
+      margin: 5px 0 0;
+      font-size: 16px;
     }
 
     input[type="text"], select {
@@ -93,7 +107,11 @@
   </style>
 </head>
 <body>
-  <h2>TEXNET HOME FIBER User Expiry Status Dashboard</h2>
+  <div class="header-box">
+    <h1>TEXNET HOME FIBER</h1>
+    <p>User Expiry Status</p>
+  </div>
+
   <div>
     <input type="text" id="search" placeholder="Search users...">
     <select id="statusFilter">
@@ -103,6 +121,7 @@
       <option value="">All Locations</option>
     </select>
   </div>
+
   <table id="userTable">
     <thead>
       <tr>
