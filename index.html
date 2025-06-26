@@ -14,12 +14,22 @@
     .Expiring { background: #fffacc; }
     .Active { background: #d2ffd2; }
     .Unknown { background: #e0e0e0; }
-    input[type="text"] { width: 100%; padding: 8px; margin: 10px 0; }
+    input[type="text"], select { width: 100%; padding: 8px; margin: 10px 0; }
   </style>
 </head>
 <body>
   <h1>User Dashboard</h1>
   <input type="text" id="search" placeholder="Search users..." />
+  <select id="statusFilter">
+    <option value="">All Statuses</option>
+    <option value="Active">Active</option>
+    <option value="Expiring">Expiring</option>
+    <option value="Expired">Expired</option>
+    <option value="Unknown">Unknown</option>
+  </select>
+  <select id="locationFilter">
+    <option value="">All Locations</option>
+  </select>
   <table id="userTable">
     <thead>
       <tr>
@@ -42,17 +52,12 @@
     function getStatus(expiryRaw) {
       if (!expiryRaw) return "Unknown";
       const expiry = expiryRaw.trim().replace(/[\r\n"]+/g, "");
-
-      // Expected format: DD/MM/YYYY HH:MM:SS
       const match = expiry.match(/(\d{2})[\/\-](\d{2})[\/\-](\d{4})\s+(\d{2}):(\d{2})(?::(\d{2}))?/);
       if (!match) return "Unknown";
-
       const [ , day, month, year, hour, minute, second = "00" ] = match;
       const isoDateStr = `${year}-${month}-${day}T${hour}:${minute}:${second}`;
       const expDate = new Date(isoDateStr);
-
       if (isNaN(expDate)) return "Unknown";
-
       const now = new Date();
       const diff = expDate - now;
       if (diff < 0) return "Expired";
@@ -69,34 +74,61 @@
           const table = document.querySelector("#userTable tbody");
           table.innerHTML = "";
 
+          const locationsSet = new Set();
+
           users.forEach(user => {
             const expiry = user["Expiry Date"] || user["expiry date"] || user["expiry"] || "";
             const status = getStatus(expiry);
+            const location = user["Location"] || user["location"] || "";
+            locationsSet.add(location);
 
             const row = document.createElement("tr");
             row.className = status;
+            row.setAttribute("data-status", status);
+            row.setAttribute("data-location", location.toLowerCase());
             row.innerHTML = `
               <td>${user["Name"] || user["name"] || ""}</td>
               <td>${user["Phone"] || user["phone"] || ""}</td>
               <td>${user["Amount"] || user["amount"] || ""}</td>
-              <td>${user["Location"] || user["location"] || ""}</td>
+              <td>${location}</td>
               <td>${user["Payment Date"] || user["payment date"] || ""}</td>
               <td>${expiry}</td>
               <td>${status}</td>
             `;
             table.appendChild(row);
           });
+
+          const locationFilter = document.getElementById("locationFilter");
+          locationFilter.innerHTML = '<option value="">All Locations</option>';
+          locationsSet.forEach(loc => {
+            if (loc.trim()) {
+              const option = document.createElement("option");
+              option.value = loc;
+              option.textContent = loc;
+              locationFilter.appendChild(option);
+            }
+          });
         }
       });
     }
 
-    document.getElementById("search").addEventListener("input", function(e) {
-      const filter = e.target.value.toLowerCase();
+    function applyFilters() {
+      const searchFilter = document.getElementById("search").value.toLowerCase();
+      const statusFilter = document.getElementById("statusFilter").value;
+      const locationFilter = document.getElementById("locationFilter").value;
       const rows = document.querySelectorAll("#userTable tbody tr");
+
       rows.forEach(row => {
-        row.style.display = row.innerText.toLowerCase().includes(filter) ? "" : "none";
+        const textMatch = row.innerText.toLowerCase().includes(searchFilter);
+        const statusMatch = !statusFilter || row.getAttribute("data-status") === statusFilter;
+        const locationMatch = !locationFilter || row.getAttribute("data-location") === locationFilter.toLowerCase();
+        row.style.display = (textMatch && statusMatch && locationMatch) ? "" : "none";
       });
-    });
+    }
+
+    document.getElementById("search").addEventListener("input", applyFilters);
+    document.getElementById("statusFilter").addEventListener("change", applyFilters);
+    document.getElementById("locationFilter").addEventListener("change", applyFilters);
 
     fetchAndDisplayUsers();
   </script>
