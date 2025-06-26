@@ -39,19 +39,21 @@
   <script>
     const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQQvwH72sBpfyaBheSCdEdnlqq3b7l4YMzA_-6-k06624D2yc3ko0vUVgh5taJzyPsqFN9kqWNVgMQk/pub?gid=0&single=true&output=csv";
 
-    function getStatus(expiry) {
-      if (!expiry) return "Unknown";
-      const parts = expiry.trim().split(/[\/-]/);
-      let expDate;
-      if (parts.length === 3) {
-        const nums = parts.map(Number);
-        if (nums[0] > 31) expDate = new Date(nums[0], nums[1] - 1, nums[2]);
-        else if (nums[2] > 31) expDate = new Date(nums[2], nums[1] - 1, nums[0]);
-        else expDate = new Date(expiry.trim());
-      } else {
-        expDate = new Date(expiry.trim());
-      }
+    function getStatus(expiryRaw) {
+      if (!expiryRaw) return "Unknown";
+      const expiry = expiryRaw.trim().replace(/[
+"]+/g, "");
+
+      // Expected format: DD/MM/YYYY HH:MM:SS
+      const match = expiry.match(/(\d{2})[\/\-](\d{2})[\/\-](\d{4})\s+(\d{2}):(\d{2})(?::(\d{2}))?/);
+      if (!match) return "Unknown";
+
+      const [ , day, month, year, hour, minute, second = "00" ] = match;
+      const isoDateStr = `${year}-${month}-${day}T${hour}:${minute}:${second}`;
+      const expDate = new Date(isoDateStr);
+
       if (isNaN(expDate)) return "Unknown";
+
       const now = new Date();
       const diff = expDate - now;
       if (diff < 0) return "Expired";
@@ -69,18 +71,18 @@
           table.innerHTML = "";
 
           users.forEach(user => {
-            const expiry = user["Expiry Date"]?.trim();
+            const expiry = user["Expiry Date"] || user["expiry date"] || user["expiry"] || "";
             const status = getStatus(expiry);
 
             const row = document.createElement("tr");
             row.className = status;
             row.innerHTML = `
-              <td>${user["Name"] || ""}</td>
-              <td>${user["Phone"] || ""}</td>
+              <td>${user["Name"] || user["name"] || ""}</td>
+              <td>${user["Phone"] || user["phone"] || ""}</td>
               <td>${status}</td>
-              <td>${user["Amount"] || ""}</td>
-              <td>${user["Location"] || ""}</td>
-              <td>${user["Payment Date"] || ""}</td>
+              <td>${user["Amount"] || user["amount"] || ""}</td>
+              <td>${user["Location"] || user["location"] || ""}</td>
+              <td>${user["Payment Date"] || user["payment date"] || ""}</td>
               <td>${expiry}</td>
             `;
             table.appendChild(row);
