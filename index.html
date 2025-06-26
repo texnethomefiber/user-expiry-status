@@ -89,19 +89,19 @@
       text-align: center;
     }
 
-    .Active {
+    .status.active {
       background: #2ecc71;
     }
 
-    .Expired {
+    .status.expired {
       background: #e74c3c;
     }
 
-    .Expiring\ Soon {
-      background: #e67e22; /* Updated to vivid orange */
+    .status.expiring-soon {
+      background: #e67e22;
     }
 
-    .Unknown {
+    .status.unknown {
       background: #7f8c8d;
     }
   </style>
@@ -167,6 +167,7 @@
     function renderTable(data) {
       tableBody.innerHTML = "";
       data.forEach(row => {
+        const statusClass = row.Status.toLowerCase().replace(/\s+/g, "-");
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td>${row.Name || ""}</td>
@@ -175,7 +176,7 @@
           <td>${row.Location || ""}</td>
           <td>${row["Payment Date"] || ""}</td>
           <td>${row["Expiry Date"] || ""}</td>
-          <td class="status ${row.Status.replace(" ", "\\ ")}">${row.Status}</td>
+          <td class="status ${statusClass}">${row.Status}</td>
         `;
         tableBody.appendChild(tr);
       });
