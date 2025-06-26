@@ -6,13 +6,90 @@
   <title>TEXNET HOME FIBER User Expiry Status Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f4; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-    th { background: #eee; cursor: pointer; user-select: none; }
-    .sort-asc::after { content: ' ↑'; }
-    .sort-desc::after { content: ' ↓'; }
-    select, input[type="text"] { padding: 5px; margin-right: 10px; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      padding: 30px;
+      background: #f0f2f5;
+      color: #333;
+    }
+
+    h2 {
+      color: #2c3e50;
+      margin-bottom: 20px;
+    }
+
+    input[type="text"], select {
+      padding: 8px 12px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      margin-right: 10px;
+      font-size: 14px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background: #fff;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    th, td {
+      padding: 12px 10px;
+      text-align: left;
+    }
+
+    thead th {
+      background: #3498db;
+      color: white;
+      position: relative;
+      user-select: none;
+      cursor: pointer;
+    }
+
+    th.sort-asc::after {
+      content: " ▲";
+      font-size: 12px;
+    }
+
+    th.sort-desc::after {
+      content: " ▼";
+      font-size: 12px;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #f9f9f9;
+    }
+
+    tbody tr:hover {
+      background: #f1f1f1;
+    }
+
+    td.status {
+      font-weight: bold;
+      padding: 8px;
+      border-radius: 4px;
+      color: white;
+      text-align: center;
+    }
+
+    .Active {
+      background: #2ecc71;
+    }
+
+    .Expired {
+      background: #e74c3c;
+    }
+
+    .Expiring\ Soon {
+      background: #f39c12;
+    }
+
+    .Unknown {
+      background: #7f8c8d;
+    }
   </style>
 </head>
 <body>
@@ -79,7 +156,7 @@
           <td>${row.Location || ""}</td>
           <td>${row["Payment Date"] || ""}</td>
           <td>${row["Expiry Date"] || ""}</td>
-          <td>${row.Status}</td>
+          <td class="status ${row.Status.replace(" ", "\\ ")}">${row.Status}</td>
         `;
         tableBody.appendChild(tr);
       });
@@ -124,11 +201,12 @@
       document.querySelectorAll("th[data-sort]").forEach(th => {
         th.classList.remove("sort-asc", "sort-desc");
         const col = th.getAttribute("data-sort");
-        if (col === currentSort.column) th.classList.add(`sort-${currentSort.direction}`);
+        if (col === currentSort.column) {
+          th.classList.add(`sort-${currentSort.direction}`);
+        }
       });
     }
 
-    // Load and parse CSV with PapaParse
     Papa.parse(csvUrl, {
       download: true,
       header: true,
