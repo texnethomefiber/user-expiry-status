@@ -25,88 +25,80 @@
       <tr>
         <th>Name</th>
         <th>Phone</th>
-        <th>Status</th>
         <th>Amount</th>
         <th>Location</th>
         <th>Payment Date</th>
         <th>Expiry Date</th>
+        <th>Status</th>
       </tr>
     </thead>
     <tbody></tbody>
   </table>
 
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<script>
-  const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQQvwH72sBpfyaBheSCdEdnlqq3b7l4YMzA_-6-k06624D2yc3ko0vUVgh5taJzyPsqFN9kqWNVgMQk/pub?gid=0&single=true&output=csv";
+  <script>
+    const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQQvwH72sBpfyaBheSCdEdnlqq3b7l4YMzA_-6-k06624D2yc3ko0vUVgh5taJzyPsqFN9kqWNVgMQk/pub?gid=0&single=true&output=csv";
 
-  function getStatus(expiryRaw) {
-    if (!expiryRaw || typeof expiryRaw !== 'string') return "Unknown";
+    function getStatus(expiryRaw) {
+      if (!expiryRaw) return "Unknown";
+      const expiry = expiryRaw.trim().replace(/[\r\n"]+/g, "");
 
-    // Expected format: DD/MM/YYYY HH:MM:SS
-    const match = expiryRaw.match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})(?::(\d{2}))?/);
-    if (!match) return "Unknown";
+      // Expected format: DD/MM/YYYY HH:MM:SS
+      const match = expiry.match(/(\d{2})[\/\-](\d{2})[\/\-](\d{4})\s+(\d{2}):(\d{2})(?::(\d{2}))?/);
+      if (!match) return "Unknown";
 
-    const [ , day, month, year, hour, minute, second = "00" ] = match;
-    const isoStr = `${year}-${month}-${day}T${hour}:${minute}:${second}`;
-    const expDate = new Date(isoStr);
+      const [ , day, month, year, hour, minute, second = "00" ] = match;
+      const isoDateStr = `${year}-${month}-${day}T${hour}:${minute}:${second}`;
+      const expDate = new Date(isoDateStr);
 
-    if (isNaN(expDate.getTime())) return "Unknown";
+      if (isNaN(expDate)) return "Unknown";
 
-    const now = new Date();
-    const diff = expDate.getTime() - now.getTime();
+      const now = new Date();
+      const diff = expDate - now;
+      if (diff < 0) return "Expired";
+      if (diff <= 86400000) return "Expiring";
+      return "Active";
+    }
 
-    if (diff < 0) return "Expired";
-    if (diff <= 86400000) return "Expiring";
-    return "Active";
-  }
+    function fetchAndDisplayUsers() {
+      Papa.parse(SHEET_URL, {
+        download: true,
+        header: true,
+        complete: function(results) {
+          const users = results.data;
+          const table = document.querySelector("#userTable tbody");
+          table.innerHTML = "";
 
-  function fetchAndDisplayUsers() {
-    Papa.parse(SHEET_URL, {
-      download: true,
-      header: true,
-      skipEmptyLines: true,
-      complete: function(results) {
-        const users = results.data;
-        const table = document.querySelector("#userTable tbody");
-        table.innerHTML = "";
+          users.forEach(user => {
+            const expiry = user["Expiry Date"] || user["expiry date"] || user["expiry"] || "";
+            const status = getStatus(expiry);
 
-        users.forEach((user, index) => {
-          // Skip rows without name or expiry
-          if (!user["Name"] && !user["name"]) return;
+            const row = document.createElement("tr");
+            row.className = status;
+            row.innerHTML = `
+              <td>${user["Name"] || user["name"] || ""}</td>
+              <td>${user["Phone"] || user["phone"] || ""}</td>
+              <td>${user["Amount"] || user["amount"] || ""}</td>
+              <td>${user["Location"] || user["location"] || ""}</td>
+              <td>${user["Payment Date"] || user["payment date"] || ""}</td>
+              <td>${expiry}</td>
+              <td>${status}</td>
+            `;
+            table.appendChild(row);
+          });
+        }
+      });
+    }
 
-          const expiry = user["Expiry Date"] || user["expiry date"] || user["expiry"] || "";
-          const status = getStatus(expiry);
-
-          const row = document.createElement("tr");
-          row.className = status;
-          row.innerHTML = `
-            <td>${user["Name"] || user["name"] || ""}</td>
-            <td>${user["Phone"] || user["phone"] || ""}</td>
-            <td>${status}</td>
-            <td>${user["Amount"] || user["amount"] || ""}</td>
-            <td>${user["Location"] || user["location"] || ""}</td>
-            <td>${user["Payment Date"] || user["payment date"] || ""}</td>
-            <td>${expiry}</td>
-          `;
-          table.appendChild(row);
-        });
-      },
-      error: function(err) {
-        console.error("PapaParse error:", err);
-      }
+    document.getElementById("search").addEventListener("input", function(e) {
+      const filter = e.target.value.toLowerCase();
+      const rows = document.querySelectorAll("#userTable tbody tr");
+      rows.forEach(row => {
+        row.style.display = row.innerText.toLowerCase().includes(filter) ? "" : "none";
+      });
     });
-  }
 
-  document.getElementById("search").addEventListener("input", function(e) {
-    const filter = e.target.value.toLowerCase();
-    const rows = document.querySelectorAll("#userTable tbody tr");
-    rows.forEach(row => {
-      row.style.display = row.innerText.toLowerCase().includes(filter) ? "" : "none";
-    });
-  });
-
-  fetchAndDisplayUsers();
-</script>
-
+    fetchAndDisplayUsers();
+  </script>
 </body>
 </html>
