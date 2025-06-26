@@ -4,112 +4,100 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>User Dashboard</title>
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 20px; }
-    h1, h2 { text-align: center; }
-    #summary { margin-bottom: 20px; font-weight: bold; text-align: center; }
-    input[type="text"] { width: 100%; padding: 8px; margin-bottom: 10px; font-size: 16px; }
-    table { width: 100%; border-collapse: collapse; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-    th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
-    th { background: #f0f0f0; cursor: pointer; }
-    tr:hover { background: #f9f9f9; }
-    .Expired { background: #ffe5e5; }
-    .Expiring { background: #fff9e6; }
-    .Active { background: #e6ffe6; }
-    .Unknown { background: #eeeeee; }
-    button { padding: 8px 12px; margin-top: 10px; display: block; }
+    body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; }
+    h1 { color: #333; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #fff; }
+    th, td { padding: 10px; border: 1px solid #ccc; text-align: left; }
+    th { background: #eee; }
+    .Expired { background: #ffd2d2; }
+    .Expiring { background: #fffacc; }
+    .Active { background: #d2ffd2; }
+    .Unknown { background: #e0e0e0; }
+    input[type="text"] { width: 100%; padding: 8px; margin: 10px 0; }
   </style>
 </head>
 <body>
   <h1>User Dashboard</h1>
-  <div id="summary">Loading...</div>
   <input type="text" id="search" placeholder="Search users..." />
   <table id="userTable">
-    <thead></thead>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Phone</th>
+        <th>Status</th>
+        <th>Amount</th>
+        <th>Location</th>
+        <th>Payment Date</th>
+        <th>Expiry Date</th>
+      </tr>
+    </thead>
     <tbody></tbody>
   </table>
-  <button id="export">Export Filtered CSV</button>
+
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script>
-    const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQQvwH72sBpfyaBheSCdEdnlqq3b7l4YMzA_-6-k06624D2yc3ko0vUVgh5taJzyPsqFN9kqWNVgMQk/pub?gid=0&single=true&output=csv";
-
-    async function fetchAndRender() {
-      const res = await fetch(sheetURL);
-      const csv = await res.text();
-      const data = Papa.parse(csv.trim(), { header: true }).data;
-      renderTable(data);
-    }
-
-    function formatAmount(amountStr) {
-      return parseFloat((amountStr || '').replace(/[^0-9.-]+/g, '')) || 0;
-    }
+    const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQQvwH72sBpfyaBheSCdEdnlqq3b7l4YMzA_-6-k06624D2yc3ko0vUVgh5taJzyPsqFN9kqWNVgMQk/pub?gid=0&single=true&output=csv";
 
     function getStatus(expiry) {
+      if (!expiry) return "Unknown";
+      const parts = expiry.trim().split(/[\/-]/);
+      let expDate;
+      if (parts.length === 3) {
+        const nums = parts.map(Number);
+        if (nums[0] > 31) expDate = new Date(nums[0], nums[1] - 1, nums[2]);
+        else if (nums[2] > 31) expDate = new Date(nums[2], nums[1] - 1, nums[0]);
+        else expDate = new Date(expiry.trim());
+      } else {
+        expDate = new Date(expiry.trim());
+      }
+      if (isNaN(expDate)) return "Unknown";
       const now = new Date();
-      const expDate = new Date(expiry.trim());
-      if (!expiry || isNaN(expDate.getTime())) return "Unknown";
-      const diff = expDate.getTime() - now.getTime();
+      const diff = expDate - now;
       if (diff < 0) return "Expired";
-      if (diff <= 24 * 60 * 60 * 1000) return "Expiring";
+      if (diff <= 86400000) return "Expiring";
       return "Active";
     }
 
-    function renderTable(data) {
-      const search = document.getElementById("search");
-      const table = document.getElementById("userTable");
-      const thead = table.querySelector("thead");
-      const tbody = table.querySelector("tbody");
-      const summary = document.getElementById("summary");
+    function fetchAndDisplayUsers() {
+      Papa.parse(SHEET_URL, {
+        download: true,
+        header: true,
+        complete: function(results) {
+          const users = results.data;
+          const table = document.querySelector("#userTable tbody");
+          table.innerHTML = "";
 
-      const headers = Object.keys(data[0] || {});
-      thead.innerHTML = `<tr>${headers.map(h => `<th>${h}</th>`).join("<th>Status</th>")}</tr>`;
+          users.forEach(user => {
+            const expiry = user["Expiry Date"]?.trim();
+            const status = getStatus(expiry);
 
-      function updateTable(filterText = "") {
-        tbody.innerHTML = "";
-        let total = 0, active = 0, expiring = 0, expired = 0, unknown = 0;
-        const filtered = data.filter(row => {
-          return Object.values(row).some(v => v && v.toLowerCase().includes(filterText.toLowerCase()));
-        });
-
-        filtered.forEach(row => {
-          const status = getStatus(row.exp);
-          const amount = formatAmount(row.amount);
-          if (status === "Active") active++;
-          else if (status === "Expiring") expiring++;
-          else if (status === "Expired") expired++;
-          else unknown++;
-          total += amount;
-
-          const rowHTML = `<tr class="${status}">` +
-            headers.map(h => `<td>${row[h]}</td>`).join("") +
-            `<td>${status}</td></tr>`;
-          tbody.innerHTML += rowHTML;
-        });
-
-        summary.innerText = `Total Users: ${filtered.length} | Total Amount: Ksh ${total.toLocaleString()} | Active: ${active} | Expiring: ${expiring} | Expired: ${expired} | Unknown: ${unknown}`;
-      }
-
-      search.addEventListener("input", e => updateTable(e.target.value));
-      document.getElementById("export").addEventListener("click", () => {
-        const rows = Array.from(tbody.querySelectorAll("tr")).map(tr =>
-          Array.from(tr.querySelectorAll("td")).map(td => td.textContent)
-        );
-        const csvContent = [
-          [...headers, "Status"].join(","),
-          ...rows.map(row => row.map(cell => `"${cell}"`).join(","))
-        ].join("\n");
-        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.download = "filtered_users.csv";
-        link.click();
+            const row = document.createElement("tr");
+            row.className = status;
+            row.innerHTML = `
+              <td>${user["Name"] || ""}</td>
+              <td>${user["Phone"] || ""}</td>
+              <td>${status}</td>
+              <td>${user["Amount"] || ""}</td>
+              <td>${user["Location"] || ""}</td>
+              <td>${user["Payment Date"] || ""}</td>
+              <td>${expiry}</td>
+            `;
+            table.appendChild(row);
+          });
+        }
       });
-
-      updateTable();
     }
 
-    fetchAndRender();
-    setInterval(fetchAndRender, 5 * 60 * 1000); // refresh every 5 minutes
+    document.getElementById("search").addEventListener("input", function(e) {
+      const filter = e.target.value.toLowerCase();
+      const rows = document.querySelectorAll("#userTable tbody tr");
+      rows.forEach(row => {
+        row.style.display = row.innerText.toLowerCase().includes(filter) ? "" : "none";
+      });
+    });
+
+    fetchAndDisplayUsers();
   </script>
 </body>
 </html>
