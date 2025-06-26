@@ -5,146 +5,179 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>User Dashboard</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; }
-    h1 { color: #333; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #fff; }
-    th, td { padding: 10px; border: 1px solid #ccc; text-align: left; }
-    th { background: #eee; }
-    .Expired { background: #ffd2d2; }
-    .Expiring { background: #fffacc; }
-    .Active { background: #d2ffd2; }
-    .Unknown { background: #e0e0e0; }
-    input[type="text"], select { width: 100%; padding: 8px; margin: 10px 0; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      padding: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 10px;
+      text-align: left;
+    }
+    th {
+      background: #007bff;
+      color: white;
+      cursor: pointer;
+    }
+    th span {
+      margin-left: 5px;
+    }
+    tr:nth-child(even) {
+      background: #f9f9f9;
+    }
+    input, select {
+      margin-bottom: 10px;
+      padding: 5px;
+    }
   </style>
 </head>
 <body>
-  <h1>User Dashboard</h1>
-  <input type="text" id="search" placeholder="Search users..." />
-  <select id="statusFilter">
-    <option value="">All Statuses</option>
-    <option value="Active">Active</option>
-    <option value="Expiring">Expiring</option>
-    <option value="Expired">Expired</option>
-    <option value="Unknown">Unknown</option>
-  </select>
-  <select id="locationFilter">
-    <option value="">All Locations</option>
-  </select>
-  <table id="userTable">
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Phone</th>
-        <th>Amount</th>
-        <th>Location</th>
-        <th>Payment Date</th>
-        <th>Expiry Date</th>
-        <th>Status</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
 
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-  <script>
-    const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQQvwH72sBpfyaBheSCdEdnlqq3b7l4YMzA_-6-k06624D2yc3ko0vUVgh5taJzyPsqFN9kqWNVgMQk/pub?gid=0&single=true&output=csv";
+<h2>User Dashboard</h2>
+<input type="text" id="searchInput" placeholder="Search users...">
+<select id="filterStatus">
+  <option value="">All Status</option>
+  <option value="Active">Active</option>
+  <option value="Expired">Expired</option>
+  <option value="Expiring Soon">Expiring Soon</option>
+</select>
+<select id="filterLocation">
+  <option value="">All Locations</option>
+</select>
 
-    function getStatus(expiryRaw) {
-      if (!expiryRaw) return "Unknown";
-      const expiry = expiryRaw.trim().replace(/[\r\n"]+/g, "");
-      const match = expiry.match(/(\d{2})[\/\-](\d{2})[\/\-](\d{4})\s+(\d{2}):(\d{2})(?::(\d{2}))?/);
-      if (!match) return "Unknown";
-      const [ , day, month, year, hour, minute, second = "00" ] = match;
-      const isoDateStr = `${year}-${month}-${day}T${hour}:${minute}:${second}`;
-      const expDate = new Date(isoDateStr);
-      if (isNaN(expDate)) return "Unknown";
-      const now = new Date();
-      const diff = expDate - now;
-      if (diff < 0) return "Expired";
-      if (diff <= 86400000) return "Expiring";
-      return "Active";
-    }
+<table id="userTable">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Phone</th>
+      <th>Amount</th>
+      <th>Location</th>
+      <th id="sort-payment" data-sort="asc">Payment Date <span id="icon-payment">↑</span></th>
+      <th id="sort-expiry" data-sort="asc">Expiry Date <span id="icon-expiry"></span></th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
 
-    function fetchAndDisplayUsers() {
-      Papa.parse(SHEET_URL, {
-        download: true,
-        header: true,
-        complete: function(results) {
-          let users = results.data;
-          const table = document.querySelector("#userTable tbody");
-          table.innerHTML = "";
+<script>
+  const sheetURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQQvwH72sBpfyaBheSCdEdnlqq3b7l4YMzA_-6-k06624D2yc3ko0vUVgh5taJzyPsqFN9kqWNVgMQk/pub?gid=0&single=true&output=csv';
 
-          const locationsSet = new Set();
+  function parseDate(dateStr) {
+    const [day, month, yearAndTime] = dateStr.split("/");
+    const [year, time] = yearAndTime.split(" ");
+    const [hours, minutes, seconds] = time.split(":");
+    return new Date(`${year}-${month}-${day}T${hours}:${minutes}:${seconds}`);
+  }
 
-          users = users.sort((a, b) => {
-            const aDateStr = a["Expiry Date"] || a["expiry date"] || a["expiry"] || "";
-            const bDateStr = b["Expiry Date"] || b["expiry date"] || b["expiry"] || "";
+  function determineStatus(expiryDateStr) {
+    const expiry = parseDate(expiryDateStr);
+    const now = new Date();
+    const diff = expiry - now;
+    if (isNaN(expiry)) return 'Unknown';
+    if (diff < 0) return 'Expired';
+    if (diff <= 24 * 60 * 60 * 1000) return 'Expiring Soon';
+    return 'Active';
+  }
 
-            const aMatch = aDateStr.match(/(\d{2})[\/\-](\d{2})[\/\-](\d{4})\s+(\d{2}):(\d{2})(?::(\d{2}))?/);
-            const bMatch = bDateStr.match(/(\d{2})[\/\-](\d{2})[\/\-](\d{4})\s+(\d{2}):(\d{2})(?::(\d{2}))?/);
-            if (!aMatch || !bMatch) return 0;
+  function populateTable(data) {
+    const tbody = document.querySelector("#userTable tbody");
+    tbody.innerHTML = "";
+    const locations = new Set();
 
-            const aIso = `${aMatch[3]}-${aMatch[2]}-${aMatch[1]}T${aMatch[4]}:${aMatch[5]}:${aMatch[6] || "00"}`;
-            const bIso = `${bMatch[3]}-${bMatch[2]}-${bMatch[1]}T${bMatch[4]}:${bMatch[5]}:${bMatch[6] || "00"}`;
+    data.forEach(row => {
+      const tr = document.createElement("tr");
+      const status = determineStatus(row[6]);
+      locations.add(row[4]);
 
-            return new Date(aIso) - new Date(bIso); // ascending order
-          });
+      tr.innerHTML = `
+        <td>${row[0]}</td>
+        <td>${row[1]}</td>
+        <td>${row[2]}</td>
+        <td>${row[4]}</td>
+        <td>${row[5]}</td>
+        <td>${row[6]}</td>
+        <td>${status}</td>
+      `;
+      tbody.appendChild(tr);
+    });
 
-          users.forEach(user => {
-            const expiry = user["Expiry Date"] || user["expiry date"] || user["expiry"] || "";
-            const status = getStatus(expiry);
-            const location = user["Location"] || user["location"] || "";
-            locationsSet.add(location);
+    // Populate location filter
+    const filterLocation = document.getElementById("filterLocation");
+    locations.forEach(loc => {
+      if (![...filterLocation.options].some(o => o.value === loc)) {
+        const opt = document.createElement("option");
+        opt.value = opt.textContent = loc;
+        filterLocation.appendChild(opt);
+      }
+    });
+  }
 
-            const row = document.createElement("tr");
-            row.className = status;
-            row.setAttribute("data-status", status);
-            row.setAttribute("data-location", location.toLowerCase());
-            row.innerHTML = `
-              <td>${user["Name"] || user["name"] || ""}</td>
-              <td>${user["Phone"] || user["phone"] || ""}</td>
-              <td>${user["Amount"] || user["amount"] || ""}</td>
-              <td>${location}</td>
-              <td>${user["Payment Date"] || user["payment date"] || ""}</td>
-              <td>${expiry}</td>
-              <td>${status}</td>
-            `;
-            table.appendChild(row);
-          });
+  function filterTable() {
+    const search = document.getElementById("searchInput").value.toLowerCase();
+    const statusFilter = document.getElementById("filterStatus").value;
+    const locationFilter = document.getElementById("filterLocation").value;
+    const rows = document.querySelectorAll("#userTable tbody tr");
 
-          const locationFilter = document.getElementById("locationFilter");
-          locationFilter.innerHTML = '<option value="">All Locations</option>';
-          locationsSet.forEach(loc => {
-            if (loc.trim()) {
-              const option = document.createElement("option");
-              option.value = loc;
-              option.textContent = loc;
-              locationFilter.appendChild(option);
-            }
-          });
-        }
-      });
-    }
+    rows.forEach(row => {
+      const name = row.cells[0].textContent.toLowerCase();
+      const status = row.cells[6].textContent;
+      const location = row.cells[3].textContent;
+      const match = name.includes(search) &&
+                    (!statusFilter || status === statusFilter) &&
+                    (!locationFilter || location === locationFilter);
+      row.style.display = match ? "" : "none";
+    });
+  }
 
-    function applyFilters() {
-      const searchFilter = document.getElementById("search").value.toLowerCase();
-      const statusFilter = document.getElementById("statusFilter").value;
-      const locationFilter = document.getElementById("locationFilter").value;
-      const rows = document.querySelectorAll("#userTable tbody tr");
+  function sortTableByDate(table, colIndex, direction) {
+    const rows = Array.from(table.querySelectorAll("tbody tr"));
+    rows.sort((a, b) => {
+      const aDate = parseDate(a.cells[colIndex].textContent);
+      const bDate = parseDate(b.cells[colIndex].textContent);
+      return direction === "asc" ? aDate - bDate : bDate - aDate;
+    });
+    rows.forEach(row => table.querySelector("tbody").appendChild(row));
+  }
 
-      rows.forEach(row => {
-        const textMatch = row.innerText.toLowerCase().includes(searchFilter);
-        const statusMatch = !statusFilter || row.getAttribute("data-status") === statusFilter;
-        const locationMatch = !locationFilter || row.getAttribute("data-location") === locationFilter.toLowerCase();
-        row.style.display = (textMatch && statusMatch && locationMatch) ? "" : "none";
-      });
-    }
+  function updateSortIcons(activeColumn, direction) {
+    document.getElementById("icon-payment").textContent = activeColumn === "payment" ? (direction === "asc" ? "↑" : "↓") : "";
+    document.getElementById("icon-expiry").textContent = activeColumn === "expiry" ? (direction === "asc" ? "↑" : "↓") : "";
+  }
 
-    document.getElementById("search").addEventListener("input", applyFilters);
-    document.getElementById("statusFilter").addEventListener("change", applyFilters);
-    document.getElementById("locationFilter").addEventListener("change", applyFilters);
+  document.getElementById("sort-payment").addEventListener("click", () => {
+    const header = document.getElementById("sort-payment");
+    const direction = header.getAttribute("data-sort") === "asc" ? "desc" : "asc";
+    header.setAttribute("data-sort", direction);
+    sortTableByDate(document.getElementById("userTable"), 4, direction);
+    updateSortIcons("payment", direction);
+  });
 
-    fetchAndDisplayUsers();
-  </script>
+  document.getElementById("sort-expiry").addEventListener("click", () => {
+    const header = document.getElementById("sort-expiry");
+    const direction = header.getAttribute("data-sort") === "asc" ? "desc" : "asc";
+    header.setAttribute("data-sort", direction);
+    sortTableByDate(document.getElementById("userTable"), 5, direction);
+    updateSortIcons("expiry", direction);
+  });
+
+  document.getElementById("searchInput").addEventListener("input", filterTable);
+  document.getElementById("filterStatus").addEventListener("change", filterTable);
+  document.getElementById("filterLocation").addEventListener("change", filterTable);
+
+  fetch(sheetURL)
+    .then(res => res.text())
+    .then(csv => {
+      const rows = csv.trim().split("\n").slice(1).map(line => line.split(","));
+      populateTable(rows);
+      sortTableByDate(document.getElementById("userTable"), 4, "asc");
+    });
+</script>
 </body>
 </html>
