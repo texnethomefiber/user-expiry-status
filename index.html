@@ -1,155 +1,115 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>User Dashboard</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; background: #f9f9f9; }
-    h2 { color: #333; }
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    th, td { padding: 8px 12px; border: 1px solid #ccc; text-align: left; }
-    th { cursor: pointer; background: #eee; }
-    tr:nth-child(even) { background: #f2f2f2; }
-    .expired { background: #ffe6e6; }
-    .expiring { background: #fff7cc; }
-    .active { background: #e6ffe6; }
-    #summary { margin-top: 20px; }
-    #filterInput { padding: 8px; width: 250px; margin-bottom: 10px; }
-    #exportBtn { padding: 8px 12px; margin-left: 10px; }
+    body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 20px; }
+    h1, h2 { text-align: center; }
+    #summary { margin-bottom: 20px; font-weight: bold; text-align: center; }
+    input[type="text"] { width: 100%; padding: 8px; margin-bottom: 10px; font-size: 16px; }
+    table { width: 100%; border-collapse: collapse; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+    th { background: #f0f0f0; cursor: pointer; }
+    tr:hover { background: #f9f9f9; }
+    .Expired { background: #ffe5e5; }
+    .Expiring { background: #fff9e6; }
+    .Active { background: #e6ffe6; }
+    .Unknown { background: #eeeeee; }
+    button { padding: 8px 12px; margin-top: 10px; display: block; }
   </style>
 </head>
 <body>
-  <h2>User Dashboard</h2>
-  <input type="text" id="filterInput" placeholder="Search users...">
-  <button id="exportBtn">Export Filtered View</button>
-  <div id="summary"></div>
-  <table id="userTable"></table>
-
+  <h1>User Dashboard</h1>
+  <div id="summary">Loading...</div>
+  <input type="text" id="search" placeholder="Search users..." />
+  <table id="userTable">
+    <thead></thead>
+    <tbody></tbody>
+  </table>
+  <button id="export">Export Filtered CSV</button>
   <script>
-    const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQQvwH72sBpfyaBheSCdEdnlqq3b7l4YMzA_-6-k06624D2yc3ko0vUVgh5taJzyPsqFN9kqWNVgMQk/pub?gid=0&single=true&output=csv';
+    const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQQvwH72sBpfyaBheSCdEdnlqq3b7l4YMzA_-6-k06624D2yc3ko0vUVgh5taJzyPsqFN9kqWNVgMQk/pub?gid=0&single=true&output=csv";
 
-    function parseAmount(str) {
-      if (!str) return 0;
-      return parseFloat(str.replace(/[A-Za-zKsh\s,\"]+/g, '').trim()) || 0;
+    async function fetchAndRender() {
+      const res = await fetch(sheetURL);
+      const csv = await res.text();
+      const data = Papa.parse(csv.trim(), { header: true }).data;
+      renderTable(data);
     }
 
-    function isValidDate(d) {
-      return d instanceof Date && !isNaN(d);
+    function formatAmount(amountStr) {
+      return parseFloat((amountStr || '').replace(/[^0-9.-]+/g, '')) || 0;
     }
 
-    function loadCSV() {
-      fetch(sheetUrl)
-        .then(res => res.text())
-        .then(csv => {
-          Papa.parse(csv, {
-            header: true,
-            skipEmptyLines: true,
-            complete: function(results) {
-              displayUsers(results.data);
-            }
-          });
-        });
-    }
-
-    function displayUsers(data) {
-      const table = document.getElementById('userTable');
+    function getStatus(expiry) {
       const now = new Date();
-      const soon = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-
-      let html = '<thead><tr>';
-      const keys = Object.keys(data[0]);
-      keys.forEach(key => html += `<th>${key}</th>`);
-      html += '<th>Status</th></tr></thead><tbody>';
-
-      let totalAmount = 0;
-      let userCount = 0;
-      let locationMap = {};
-
-      data.forEach(row => {
-        const expiryStr = row['Expiry Date'];
-        const expiryDate = new Date(expiryStr);
-        const amount = parseAmount(row['Amount']);
-
-        let status = 'Active';
-        let rowClass = 'active';
-
-        if (!isValidDate(expiryDate)) {
-          status = 'Unknown';
-        } else if (expiryDate < now) {
-          status = 'Expired';
-          rowClass = 'expired';
-        } else if (expiryDate < soon) {
-          status = 'Expiring Soon';
-          rowClass = 'expiring';
-        }
-
-        if (status !== 'Unknown') {
-          userCount++;
-          totalAmount += amount;
-          const location = row['Location'] || 'Unknown';
-          locationMap[location] = locationMap[location] || { count: 0, total: 0 };
-          locationMap[location].count++;
-          locationMap[location].total += amount;
-        }
-
-        html += `<tr class="${rowClass}">`;
-        keys.forEach(k => html += `<td>${row[k]}</td>`);
-        html += `<td>${status}</td></tr>`;
-      });
-
-      html += '</tbody>';
-      table.innerHTML = html;
-
-      document.getElementById('summary').innerHTML =
-        `<strong>Total Users:</strong> ${userCount} | <strong>Total Amount:</strong> Ksh ${totalAmount.toLocaleString()}<br><br>` +
-        Object.entries(locationMap).map(([loc, {count, total}]) =>
-          `${loc}: ${count} users — Ksh ${total.toLocaleString()}`
-        ).join('<br>');
-
-      document.querySelectorAll('th').forEach((th, i) => {
-        th.addEventListener('click', () => sortTable(i));
-      });
+      const expDate = new Date(expiry.trim());
+      if (!expiry || isNaN(expDate.getTime())) return "Unknown";
+      const diff = expDate.getTime() - now.getTime();
+      if (diff < 0) return "Expired";
+      if (diff <= 24 * 60 * 60 * 1000) return "Expiring";
+      return "Active";
     }
 
-    function sortTable(colIndex) {
+    function renderTable(data) {
+      const search = document.getElementById("search");
       const table = document.getElementById("userTable");
-      const rows = Array.from(table.rows).slice(1);
-      const dir = table.getAttribute('data-sort-dir') === 'asc' ? 'desc' : 'asc';
-      table.setAttribute('data-sort-dir', dir);
-      rows.sort((a, b) => {
-        const x = a.cells[colIndex].textContent.trim();
-        const y = b.cells[colIndex].textContent.trim();
-        return dir === 'asc' ? x.localeCompare(y) : y.localeCompare(x);
+      const thead = table.querySelector("thead");
+      const tbody = table.querySelector("tbody");
+      const summary = document.getElementById("summary");
+
+      const headers = Object.keys(data[0] || {});
+      thead.innerHTML = `<tr>${headers.map(h => `<th>${h}</th>`).join("<th>Status</th>")}</tr>`;
+
+      function updateTable(filterText = "") {
+        tbody.innerHTML = "";
+        let total = 0, active = 0, expiring = 0, expired = 0, unknown = 0;
+        const filtered = data.filter(row => {
+          return Object.values(row).some(v => v && v.toLowerCase().includes(filterText.toLowerCase()));
+        });
+
+        filtered.forEach(row => {
+          const status = getStatus(row.exp);
+          const amount = formatAmount(row.amount);
+          if (status === "Active") active++;
+          else if (status === "Expiring") expiring++;
+          else if (status === "Expired") expired++;
+          else unknown++;
+          total += amount;
+
+          const rowHTML = `<tr class="${status}">` +
+            headers.map(h => `<td>${row[h]}</td>`).join("") +
+            `<td>${status}</td></tr>`;
+          tbody.innerHTML += rowHTML;
+        });
+
+        summary.innerText = `Total Users: ${filtered.length} | Total Amount: Ksh ${total.toLocaleString()} | Active: ${active} | Expiring: ${expiring} | Expired: ${expired} | Unknown: ${unknown}`;
+      }
+
+      search.addEventListener("input", e => updateTable(e.target.value));
+      document.getElementById("export").addEventListener("click", () => {
+        const rows = Array.from(tbody.querySelectorAll("tr")).map(tr =>
+          Array.from(tr.querySelectorAll("td")).map(td => td.textContent)
+        );
+        const csvContent = [
+          [...headers, "Status"].join(","),
+          ...rows.map(row => row.map(cell => `"${cell}"`).join(","))
+        ].join("\n");
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "filtered_users.csv";
+        link.click();
       });
-      rows.forEach(r => table.appendChild(r));
+
+      updateTable();
     }
 
-    document.getElementById('filterInput').addEventListener('input', function() {
-      const val = this.value.toLowerCase();
-      const rows = document.querySelectorAll('#userTable tbody tr');
-      rows.forEach(row => {
-        row.style.display = row.textContent.toLowerCase().includes(val) ? '' : 'none';
-      });
-    });
-
-    document.getElementById('exportBtn').addEventListener('click', () => {
-      const rows = Array.from(document.querySelectorAll('#userTable tbody tr')).filter(r => r.style.display !== 'none');
-      let csv = Array.from(document.querySelectorAll('#userTable thead tr th')).map(th => th.textContent).join(',') + '\n';
-      rows.forEach(row => {
-        const cells = Array.from(row.cells).map(td => '"' + td.textContent.replace(/"/g, '""') + '"');
-        csv += cells.join(',') + '\n';
-      });
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = 'filtered_users.csv';
-      link.click();
-    });
-
-    loadCSV();
-    setInterval(loadCSV, 5 * 60 * 1000);
+    fetchAndRender();
+    setInterval(fetchAndRender, 5 * 60 * 1000); // refresh every 5 minutes
   </script>
 </body>
 </html>
