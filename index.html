@@ -321,10 +321,30 @@ const messageLink = `https://wa.me/${normalizedPhone.replace("+", "")}?text=${en
     statusFilter.addEventListener("change", applyFiltersAndRender);
     locationFilter.addEventListener("change", applyFiltersAndRender);
     function fallbackToSMS(event, phoneNumber) {
+  event.preventDefault(); // Prevent default link behavior
   setTimeout(() => {
     const confirmSMS = confirm("If WhatsApp is not installed, would you like to send an SMS instead?");
     if (confirmSMS) {
-      const smsLink = `sms:${phoneNumber}?body=Hello from TEXNET HOME FIBER`;
+      const row = event.target.closest("tr");
+      const expiry = row.children[5].innerText || "";
+      const status = row.children[6].innerText || "";
+      const expiryFormatted = expiry.replace(" ", " at");
+
+      let message = "Dear Client,";
+
+      if (status === "Active") {
+        message += ` thank you for staying connected with TEXNET HOME FIBER. Your subscription is active and will expire on ${expiryFormatted}.`;
+      } else if (status === "Expired") {
+        message += ` your TEXNET HOME FIBER subscription expired on ${expiryFormatted}.`;
+      } else if (status === "Expiring Soon") {
+        message += ` your TEXNET HOME FIBER subscription is expiring soon on ${expiryFormatted}.`;
+      } else {
+        message += ` we could not determine your subscription status.`;
+      }
+
+      message += `\n\nFor payments:\nPAYBILL: 222111\nACCOUNT NUMBER: 162238\n\nThank you for choosing TEXNET.`;
+
+      const smsLink = `sms:${phoneNumber}?body=${encodeURIComponent(message)}`;
       window.location.href = smsLink;
     }
   }, 3000);
