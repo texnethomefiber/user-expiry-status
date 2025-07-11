@@ -214,7 +214,27 @@
     const tr = document.createElement("tr");
     const phone = (row.Phone || "").trim();
     const normalizedPhone = phone.startsWith("+") ? phone : `+254${phone.replace(/^0+/, "")}`;
-    const messageLink = `https://wa.me/${normalizedPhone.replace("+", "")}?text=${encodeURIComponent("Hello from TEXNET HOME FIBER")}`;
+    const status = row.Status;
+const expiry = row["Expiry Date"] || "";
+const expiryFormatted = expiry.replace(" ", " at");
+
+let message = "Dear Client,";
+
+if (status === "Active") {
+  message += ` thank you for staying connected with TEXNET HOME FIBER. Your subscription is active and will expire on ${expiryFormatted}.`;
+} else if (status === "Expired") {
+  message += ` your TEXNET HOME FIBER subscription expired on ${expiryFormatted}.`;
+} else if (status === "Expiring Soon") {
+  message += ` your TEXNET HOME FIBER subscription is expiring soon on ${expiryFormatted}.`;
+} else {
+  message += ` we could not determine your subscription status.`;
+}
+
+message += `\n\nFor payments:\nPAYBILL: 222111\nACCOUNT NUMBER: 162238\n\nThank you for choosing TEXNET.`;
+
+const encodedMessage = encodeURIComponent(message);
+const messageLink = `https://wa.me/${normalizedPhone.replace("+", "")}?text=${encodedMessage}`;
+
 
     tr.innerHTML = `
       <td>${row.Name || ""}</td>
@@ -227,11 +247,9 @@
       <td><a href="${messageLink}" target="_blank" onclick="fallbackToSMS(event, '${normalizedPhone}')">Message</a></td>
     `;
     
-    tableBody.appendChild(tr); // ✅ THIS LINE WAS MISSING
+    tableBody.appendChild(tr)
   });
 }
-
-    }
 
     function applyFiltersAndRender() {
       const search = searchInput.value.toLowerCase();
