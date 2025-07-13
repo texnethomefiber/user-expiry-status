@@ -219,17 +219,21 @@
   const date = parseDate(dateStr);
   if (!date) return dateStr;
 
-  const options = {
+  const datePart = date.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
-    day: 'numeric',
+    day: 'numeric'
+  });
+
+  const timePart = date.toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true
-  };
+  });
 
-  return date.toLocaleString('en-US', options).replace(",", " at");
+  return `${datePart} at ${timePart}`;
 }
+
 
 function renderTable(data) {
   tableBody.innerHTML = "";
