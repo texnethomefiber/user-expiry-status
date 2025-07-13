@@ -207,34 +207,51 @@
       return "Active";
     }
 
-    function renderTable(data) {
+    function formatExpiryDate(dateStr) {
+  const date = parseDate(dateStr);
+  if (!date) return dateStr;
+
+  const options = {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  };
+
+  return date.toLocaleString('en-US', options).replace(",", " at");
+}
+
+function renderTable(data) {
   tableBody.innerHTML = "";
   data.forEach(row => {
     const statusClass = row.Status.toLowerCase().replace(/\s+/g, "-");
     const tr = document.createElement("tr");
+
     const phone = (row.Phone || "").trim();
     const normalizedPhone = phone.startsWith("+") ? phone : `+254${phone.replace(/^0+/, "")}`;
+
     const status = row.Status;
-const expiry = row["Expiry Date"] || "";
-const expiryFormatted = expiry.replace(" ", " at");
+    const expiry = row["Expiry Date"] || "";
+    const expiryFormatted = formatExpiryDate(expiry);
 
-let message = "Dear Client,";
+    let message = "Dear Client,";
 
-if (status === "Active") {
-  message += ` thank you for staying connected with TEXNET HOME FIBER. Your subscription is active and will expire on ${expiryFormatted}.`;
-} else if (status === "Expired") {
-  message += ` your TEXNET HOME FIBER subscription expired on ${expiryFormatted}.`;
-} else if (status === "Expiring Soon") {
-  message += ` your TEXNET HOME FIBER subscription is expiring soon on ${expiryFormatted}.`;
-} else {
-  message += ` we could not determine your subscription status.`;
-}
+    if (status === "Active") {
+      message += ` thank you for staying connected with TEXNET HOME FIBER. Your subscription is active and will expire on ${expiryFormatted}.`;
+    } else if (status === "Expired") {
+      message += ` your TEXNET HOME FIBER subscription expired on ${expiryFormatted}.`;
+    } else if (status === "Expiring Soon") {
+      message += ` your TEXNET HOME FIBER subscription is expiring soon on ${expiryFormatted}.`;
+    } else {
+      message += ` we could not determine your subscription status.`;
+    }
 
-message += `\n\nFor payments:\nPAYBILL: 222111\nACCOUNT NUMBER: 162238\n\nThank you for choosing TEXNET.`;
+    message += `\n\nFor payments:\nPAYBILL: 222111\nACCOUNT NUMBER: 162238\n\nThank you for choosing TEXNET.`;
 
-const encodedMessage = encodeURIComponent(message);
-const messageLink = `https://wa.me/${normalizedPhone.replace("+", "")}?text=${encodedMessage}`;
-
+    const encodedMessage = encodeURIComponent(message);
+    const messageLink = `https://wa.me/${normalizedPhone.replace("+", "")}?text=${encodedMessage}`;
 
     tr.innerHTML = `
       <td>${row.Name || ""}</td>
@@ -246,8 +263,8 @@ const messageLink = `https://wa.me/${normalizedPhone.replace("+", "")}?text=${en
       <td class="status ${statusClass}">${row.Status}</td>
       <td><a href="${messageLink}" target="_blank" onclick="setTimeout(() => fallbackToSMS(event, '${normalizedPhone}'), 5000)">Message</a></td>
     `;
-    
-    tableBody.appendChild(tr)
+
+    tableBody.appendChild(tr);
   });
 }
 
@@ -328,7 +345,7 @@ const messageLink = `https://wa.me/${normalizedPhone.replace("+", "")}?text=${en
       const row = event.target.closest("tr");
       const expiry = row.children[5].innerText || "";
       const status = row.children[6].innerText || "";
-      const expiryFormatted = expiry.replace(" ", " at");
+      const expiryFormatted = formatExpiryDate(expiry);
 
       let message = "Dear Client,";
 
