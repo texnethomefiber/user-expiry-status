@@ -419,7 +419,7 @@ const whatsappPhone = phone.replace(/^0/, "254"); // 2547XXXXXXXX for WhatsApp
       // Ensure phone is valid 10-digit starting with 07
       if (!/^07\d{8}$/.test(phone)) return null;
 
-      return ["Dear Client", phone];
+      return [row.Name || "", phone];
     })
     .filter(row => row); // Remove nulls
 
