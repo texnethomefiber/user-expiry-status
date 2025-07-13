@@ -194,6 +194,13 @@
 
 
   <script>
+    function normalizePhone(phone) {
+  phone = (phone || "").replace(/\s+/g, "");
+  if (phone.startsWith("+254")) return "0" + phone.slice(4);
+  if (phone.startsWith("254")) return "0" + phone.slice(3);
+  if (phone.length === 9 && phone.startsWith("7")) return "0" + phone;
+  return phone;
+}
     const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQQvwH72sBpfyaBheSCdEdnlqq3b7l4YMzA_-6-k06624D2yc3ko0vUVgh5taJzyPsqFN9kqWNVgMQk/pub?gid=0&single=true&output=csv";
     const tableBody = document.querySelector("#userTable tbody");
     const searchInput = document.getElementById("search");
@@ -254,8 +261,8 @@ function renderTable(data) {
     const statusClass = row.Status.toLowerCase().replace(/\s+/g, "-");
     const tr = document.createElement("tr");
 
-    const phone = (row.Phone || "").trim();
-    const normalizedPhone = phone.startsWith("+") ? phone : `+254${phone.replace(/^0+/, "")}`;
+    const phone = normalizePhone(row.Phone); // 07XXXXXXXX
+const whatsappPhone = phone.replace(/^0/, "254"); // 2547XXXXXXXX for WhatsApp
 
     const status = row.Status;
     const expiry = row["Expiry Date"] || "";
@@ -276,7 +283,7 @@ function renderTable(data) {
     message += `\n\nFor payments:\nPAYBILL: 222111\nACCOUNT NUMBER: 162238\n\nThank you for choosing TEXNET.`;
 
     const encodedMessage = encodeURIComponent(message);
-    const messageLink = `https://wa.me/${normalizedPhone.replace("+", "")}?text=${encodedMessage}`;
+    const messageLink = `https://wa.me/${whatsappPhone}?text=${encodedMessage}`;
 
     tr.innerHTML = `
       <td>${row.Name || ""}</td>
@@ -286,7 +293,7 @@ function renderTable(data) {
       <td>${row["Payment Date"] || ""}</td>
       <td>${row["Expiry Date"] || ""}</td>
       <td class="status ${statusClass}">${row.Status}</td>
-      <td><a href="${messageLink}" target="_blank" onclick="setTimeout(() => fallbackToSMS(event, '${normalizedPhone}'), 5000)">Message</a></td>
+      <td><a href="${messageLink}" target="_blank" onclick="setTimeout(() => fallbackToSMS(event, '${phone}'), 5000)">Message</a></td>
     `;
 
     tableBody.appendChild(tr);
@@ -301,8 +308,8 @@ function renderTable(data) {
       const filtered = allData.filter(row => {
         return (!status || row.Status === status) &&
                (!location || row.Location === location) &&
-               Object.values(row).some(val => val.toLowerCase().includes(search));
-      });
+               Object.values(row).some(val => (val || "").toString().toLowerCase().includes(search));
+  });
 
       renderTable(sortData(filtered));
     }
@@ -399,7 +406,7 @@ function renderTable(data) {
   const filtered = allData.filter(row => {
     return (!status || row.Status === status) &&
            (!location || row.Location === location) &&
-           Object.values(row).some(val => val.toLowerCase().includes(search));
+           Object.values(row).some(val => (val || "").toString().toLowerCase().includes(search));
   });
 
   const exportData = filtered
@@ -407,13 +414,7 @@ function renderTable(data) {
       const rawPhone = (row.Phone || "").trim();
       if (!rawPhone) return null;
 
-      let phone = rawPhone.replace(/\s+/g, "");
-
-      if (phone.startsWith("+254")) {
-        phone = "0" + phone.slice(4);
-      } else if (phone.startsWith("254")) {
-        phone = "0" + phone.slice(3);
-      }
+      let phone = normalizePhone(rawPhone);
 
       // Ensure phone is valid 10-digit starting with 07
       if (!/^07\d{8}$/.test(phone)) return null;
