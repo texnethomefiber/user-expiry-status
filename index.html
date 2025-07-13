@@ -191,11 +191,19 @@
     let currentSort = { column: 'Expiry Date', direction: 'asc' };
 
     function parseDate(dateStr) {
-      const [d, m, yAndTime] = dateStr.split("/");
-      if (!yAndTime) return null;
-      const [y, time] = yAndTime.split(" ");
-      return new Date(`${y}-${m}-${d}T${time || "00:00:00"}`);
-    }
+  if (!dateStr) return null;
+  const parts = dateStr.trim().split(" ");
+  const datePart = parts[0];
+  let timePart = parts[1] || "00:00:00";
+
+  // Truncate seconds from timePart
+  timePart = timePart.split(":").slice(0, 2).join(":");
+
+  const [d, m, y] = datePart.split("/");
+  if (!d || !m || !y) return null;
+
+  return new Date(`${y}-${m}-${d}T${timePart}`);
+}
 
     function getStatus(expiryStr) {
       const expiry = parseDate(expiryStr);
