@@ -154,15 +154,25 @@
     <p>User Expiry Status</p>
   </div>
 
-  <div>
-    <input type="text" id="search" placeholder="Search users...">
-    <select id="statusFilter">
-      <option value="">All Status</option>
-    </select>
-    <select id="locationFilter">
-      <option value="">All Locations</option>
-    </select>
-  </div>
+  
+
+  <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 10px;">
+  <input type="text" id="search" placeholder="Search users...">
+  <select id="statusFilter">
+    <option value="">All Status</option>
+  </select>
+  <select id="locationFilter">
+    <option value="">All Locations</option>
+  </select>
+  <button id="exportPhones" style="padding: 8px 12px; background: #2ecc71; color: white; border: none; border-radius: 5px; cursor: pointer;">
+    📤 Export Numbers
+  </button>
+    <button id="copyOutage" style="padding: 8px 12px; background: #e67e22; color: white; border: none; border-radius: 5px; cursor: pointer;">
+  📢 Copy Outage Message
+</button>
+
+</div>
+
 
   <table id="userTable">
     <thead>
@@ -179,6 +189,8 @@
 </thead>
     <tbody></tbody>
   </table>
+
+
 
   <script>
     const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQQvwH72sBpfyaBheSCdEdnlqq3b7l4YMzA_-6-k06624D2yc3ko0vUVgh5taJzyPsqFN9kqWNVgMQk/pub?gid=0&single=true&output=csv";
@@ -378,7 +390,47 @@ function renderTable(data) {
     }
   }, 3000);
 }
+    document.getElementById("exportPhones").addEventListener("click", () => {
+  const search = searchInput.value.toLowerCase();
+  const status = statusFilter.value;
+  const location = locationFilter.value;
 
-  </script>
+  const filtered = allData.filter(row => {
+    return (!status || row.Status === status) &&
+           (!location || row.Location === location) &&
+           Object.values(row).some(val => val.toLowerCase().includes(search));
+  });
+
+  const numbers = filtered
+    .map(row => (row.Phone || "").trim())
+    .filter(phone => phone)
+    .map(phone => phone.startsWith("+") ? phone : `+254${phone.replace(/^0+/, "")}`);
+
+  if (numbers.length === 0) {
+    alert("No numbers found for the selected filters.");
+    return;
+  }
+
+  const numberString = numbers.join(",");
+  navigator.clipboard.writeText(numberString)
+    .then(() => alert(`Copied ${numbers.length} phone number(s) to clipboard.`))
+    .catch(() => alert("Failed to copy numbers. Please try again."));
+});
+
+  document.getElementById("copyOutage").addEventListener("click", () => {
+    const outageMessage = `Dear Client,
+
+Please note that there is a temporary service outage in your area. Our team is working diligently to restore connectivity as soon as possible.
+
+We sincerely apologize for the inconvenience and thank you for your patience.
+
+— TEXNET HOME FIBER`;
+
+    navigator.clipboard.writeText(outageMessage)
+      .then(() => alert("Outage message copied to clipboard."))
+      .catch(() => alert("Failed to copy outage message. Please try again."));
+  });
+</script>
+
 </body>
 </html>
