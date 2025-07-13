@@ -402,27 +402,38 @@ function renderTable(data) {
            Object.values(row).some(val => val.toLowerCase().includes(search));
   });
 
-  const numbers = filtered
-    .map(row => (row.Phone || "").trim())
-    .filter(phone => phone)
-    .map(phone => {
-      const cleaned = phone.replace(/\s+/g, "");
-      if (cleaned.startsWith("+")) return cleaned;
-      return `+254${cleaned.replace(/^0+/, "")}`;
-    })
-    .filter(phone => phone.startsWith("+254"));
+  const exportData = filtered
+    .map(row => {
+      const rawPhone = (row.Phone || "").trim();
+      if (!rawPhone) return null;
 
-  if (numbers.length === 0) {
-    alert("No +254 numbers found for the selected filters.");
+      let phone = rawPhone.replace(/\s+/g, "");
+
+      if (phone.startsWith("+254")) {
+        phone = "0" + phone.slice(4);
+      } else if (phone.startsWith("254")) {
+        phone = "0" + phone.slice(3);
+      }
+
+      // Ensure phone is valid 10-digit starting with 07
+      if (!/^07\d{8}$/.test(phone)) return null;
+
+      return ["Dear Client", phone];
+    })
+    .filter(row => row); // Remove nulls
+
+  if (exportData.length === 0) {
+    alert("No valid 07xxxxxxxx numbers found for the selected filters.");
     return;
   }
 
-  const worksheet = XLSX.utils.aoa_to_sheet([["Phone Number"], ...numbers.map(num => [num])]);
+  const worksheet = XLSX.utils.aoa_to_sheet([["Name", "Phone"], ...exportData]);
   const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "PhoneNumbers");
+  XLSX.utils.book_append_sheet(workbook, worksheet, "ClientPhones");
 
-  XLSX.writeFile(workbook, "texnet-254-numbers.xlsx");
+  XLSX.writeFile(workbook, "texnet-clients.xlsx");
 });
+
 
   document.getElementById("copyOutage").addEventListener("click", () => {
     const outageMessage = `Dear Client,
