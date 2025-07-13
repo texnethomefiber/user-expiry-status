@@ -244,7 +244,7 @@ const messageLink = `https://wa.me/${normalizedPhone.replace("+", "")}?text=${en
       <td>${row["Payment Date"] || ""}</td>
       <td>${row["Expiry Date"] || ""}</td>
       <td class="status ${statusClass}">${row.Status}</td>
-      <td><a href="${messageLink}" target="_blank" onclick="fallbackToSMS(event, '${normalizedPhone}')">Message</a></td>
+      <td><a href="${messageLink}" target="_blank" onclick="setTimeout(() => fallbackToSMS(event, '${normalizedPhone}'), 5000)">Message</a></td>
     `;
     
     tableBody.appendChild(tr)
