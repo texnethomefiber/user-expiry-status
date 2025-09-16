@@ -7,108 +7,117 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <style>
-  body {
-    font-family: 'Segoe UI', sans-serif;
-    padding: 30px;
-    background: #f0f2f5;
-    color: #333;
-  }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      padding: 30px;
+      background: #f0f2f5;
+      color: #333;
+    }
 
-  input[type="text"], select {
-    padding: 8px 12px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    margin-right: 10px;
-    font-size: 14px;
-  }
+    .header-box {
+      background: linear-gradient(135deg, #3498db, #2980b9);
+      color: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
 
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 20px;
-    background: #fff;
-    box-shadow: 0 0 10px rgba(0,0,0,0.05);
-    border-radius: 8px;
-    overflow: hidden;
-  }
+    .header-box h1 {
+      margin: 0;
+      font-size: 28px;
+    }
 
-  th, td {
-    padding: 12px 10px;
-    text-align: left;
-  }
+    .header-box p {
+      margin: 5px 0 0;
+      font-size: 16px;
+    }
 
-  thead th {
-    background: #3498db;
-    color: white;
-    position: relative;
-    user-select: none;
-    cursor: pointer;
-  }
+    input[type="text"], select {
+      padding: 8px 12px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      margin-right: 10px;
+      font-size: 14px;
+    }
 
-  th.sort-asc::after {
-    content: " ▲";
-    font-size: 12px;
-  }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background: #fff;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+      border-radius: 8px;
+      overflow: hidden;
+    }
 
-  th.sort-desc::after {
-    content: " ▼";
-    font-size: 12px;
-  }
+    th, td {
+      padding: 12px 10px;
+      text-align: left;
+    }
 
-  tbody tr:nth-child(even) {
-    background: #f9f9f9;
-  }
+    thead th {
+      background: #3498db;
+      color: white;
+      position: relative;
+      user-select: none;
+      cursor: pointer;
+    }
 
-  tbody tr:hover {
-    background: #f1f1f1;
-  }
+    th.sort-asc::after {
+      content: " ▲";
+      font-size: 12px;
+    }
 
-  td.status {
-    font-weight: bold;
-    padding: 8px;
-    border-radius: 4px;
-    color: white;
-    text-align: center;
-  }
+    th.sort-desc::after {
+      content: " ▼";
+      font-size: 12px;
+    }
 
-  .status.active {
-    background: #2ecc71;
-  }
+    tbody tr:nth-child(even) {
+      background: #f9f9f9;
+    }
 
-  .status.expired {
-    background: #e74c3c;
-  }
+    tbody tr:hover {
+      background: #f1f1f1;
+    }
 
-  .status.expiring-soon {
-    background: #e67e22;
-  }
+    td.status {
+      font-weight: bold;
+      padding: 8px;
+      border-radius: 4px;
+      color: white;
+      text-align: center;
+    }
 
-  .status.unknown {
-    background: #7f8c8d;
-  }
+    .status.active {
+      background: #2ecc71;
+    }
 
-  #totalsBox {
-    margin-top: 15px;
-    padding: 10px;
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    font-size: 15px;
-    font-weight: 500;
-  }
+    .status.expired {
+      background: #e74c3c;
+    }
 
-  #totalsBox b {
-    color: #2c3e50;
-  }
+    .status.expiring-soon {
+      background: #e67e22;
+    }
 
-  #totalsBox .amount {
-    color: #2ecc71;
-    font-weight: bold;
-  }
-
+    .status.unknown {
+      background: #7f8c8d;
+    }
+  </style>
+  <style>
   @media (max-width: 768px) {
     body {
       padding: 15px;
+    }
+
+    .header-box h1 {
+      font-size: 22px;
+    }
+
+    .header-box p {
+      font-size: 14px;
     }
 
     input[type="text"], select {
@@ -139,18 +148,16 @@
     }
   }
 </style>
-
 </head>
 <body>
-  <header style="display: flex; align-items: center; padding: 15px 20px; background: linear-gradient(135deg, #3498db, #2980b9); color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 1000; border-radius: 0 0 10px 10px;">
-  <img src="texnet_logo.png" alt="TEXNET Logo" style="height: 50px; margin-right: 15px;">
-  <div>
-    <h1 style="margin: 0; font-size: 1.5em; color: white;">TEXNET HOME FIBER</h1>
-    <p style="margin: 0; font-size: 0.9em; color: #f0f0f0;">User Expiry Status</p>
+  <div class="header-box">
+    <h1>TEXNET HOME FIBER</h1>
+    <p>User Expiry Status</p>
   </div>
-</header>
 
-  <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 30px 0 20px;">
+  
+
+  <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 10px;">
   <input type="text" id="search" placeholder="Search users...">
   <select id="statusFilter">
     <option value="">All Status</option>
@@ -318,13 +325,13 @@ const whatsappPhone = phone.replace(/^0/, "254"); // 2547XXXXXXXX for WhatsApp
     if (!isNaN(amount)) totalAmount += amount;
   });
 
-    totalsBox.innerHTML = `
+  totalsBox.innerHTML = `
     📊 <b>Total Users:</b> ${total} |
-    <span class="status active">Active: ${active}</span> |
-    <span class="status expired">Expired: ${expired}</span> |
-    <span class="status expiring-soon">Expiring Soon: ${soon}</span> |
-    <span class="status unknown">Unknown: ${unknown}</span><br>
-    💰 <span class="amount">Total Amount Paid: ${totalAmount.toLocaleString()}</span>
+    <span style="color:#2ecc71;"><b>Active:</b> ${active}</span> |
+    <span style="color:#e74c3c;"><b>Expired:</b> ${expired}</span> |
+    <span style="color:#e67e22;"><b>Expiring Soon:</b> ${soon}</span> |
+    <span style="color:#7f8c8d;"><b>Unknown:</b> ${unknown}</span><br>
+    💰 <b>Total Amount Paid:</b> ${totalAmount.toLocaleString()}
   `;
 }
 
