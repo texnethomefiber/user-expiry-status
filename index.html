@@ -173,6 +173,16 @@
 </button>
 
 </div>
+  <div id="totalsBox" style="
+  margin-top: 15px;
+  padding: 10px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  font-size: 15px;
+  font-weight: 500;
+"></div>
+
 
 
   <table id="userTable">
@@ -299,29 +309,59 @@ const whatsappPhone = phone.replace(/^0/, "254"); // 2547XXXXXXXX for WhatsApp
     tableBody.appendChild(tr);
   });
 }
+    function renderTotals(data) {
+  const totalsBox = document.getElementById("totalsBox");
 
-    function applyFiltersAndRender() {
-      const search = searchInput.value.toLowerCase();
-      const status = statusFilter.value;
-      const location = locationFilter.value;
+  const total = data.length;
+  const active = data.filter(r => r.Status === "Active").length;
+  const expired = data.filter(r => r.Status === "Expired").length;
+  const soon = data.filter(r => r.Status === "Expiring Soon").length;
+  const unknown = data.filter(r => r.Status === "Unknown").length;
 
-      const filtered = allData.filter(row => {
-        return (!status || row.Status === status) &&
-               (!location || row.Location === location) &&
-               Object.values(row).some(val => (val || "").toString().toLowerCase().includes(search));
+  // Try to sum the Amount column
+  let totalAmount = 0;
+  data.forEach(r => {
+    const amount = parseFloat((r.Amount || "").toString().replace(/[^0-9.]/g, ""));
+    if (!isNaN(amount)) totalAmount += amount;
   });
 
-      renderTable(sortData(filtered));
-    }
+  totalsBox.innerHTML = `
+    📊 <b>Total Users:</b> ${total} |
+    <span style="color:#2ecc71;"><b>Active:</b> ${active}</span> |
+    <span style="color:#e74c3c;"><b>Expired:</b> ${expired}</span> |
+    <span style="color:#e67e22;"><b>Expiring Soon:</b> ${soon}</span> |
+    <span style="color:#7f8c8d;"><b>Unknown:</b> ${unknown}</span><br>
+    💰 <b>Total Amount Paid:</b> ${totalAmount.toLocaleString()}
+  `;
+}
+
+
+    function applyFiltersAndRender() {
+  const search = searchInput.value.toLowerCase();
+  const status = statusFilter.value;
+  const location = locationFilter.value;
+
+  const filtered = allData.filter(row => {
+    return (!status || row.Status === status) &&
+           (!location || row.Location === location) &&
+           Object.values(row).some(val => (val || "").toString().toLowerCase().includes(search));
+  });
+
+  const sorted = sortData(filtered);
+  renderTable(sorted);
+  renderTotals(sorted); 
+}
+
 
     function sortData(data) {
-      return [...data].sort((a, b) => {
-        const aDate = parseDate(a[currentSort.column]);
-        const bDate = parseDate(b[currentSort.column]);
-        if (!aDate || !bDate) return 0;
-        return currentSort.direction === 'asc' ? aDate - bDate : bDate - aDate;
-      });
-    }
+  return [...data].sort((a, b) => {
+    const aDate = parseDate(a[currentSort.column]);
+    const bDate = parseDate(b[currentSort.column]);
+    if (!aDate || !bDate) return 0;
+    return currentSort.direction === 'asc' ? aDate - bDate : bDate - aDate;
+  });
+}
+    
 
     function addSortListeners() {
       document.querySelectorAll("th[data-sort]").forEach(th => {
