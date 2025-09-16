@@ -325,12 +325,12 @@ const whatsappPhone = phone.replace(/^0/, "254"); // 2547XXXXXXXX for WhatsApp
     if (!isNaN(amount)) totalAmount += amount;
   });
 
-  totalsBox.innerHTML = `
+    totalsBox.innerHTML = `
     📊 <b>Total Users:</b> ${total} |
-    <span style="color:#2ecc71;"><b>Active:</b> ${active}</span> |
-    <span style="color:#e74c3c;"><b>Expired:</b> ${expired}</span> |
-    <span style="color:#e67e22;"><b>Expiring Soon:</b> ${soon}</span> |
-    <span style="color:#7f8c8d;"><b>Unknown:</b> ${unknown}</span><br>
+    <span class="status active">Active: ${active}</span> |
+    <span class="status expired">Expired: ${expired}</span> |
+    <span class="status expiring-soon">Expiring Soon: ${soon}</span> |
+    <span class="status unknown">Unknown: ${unknown}</span><br>
     💰 <b>Total Amount Paid:</b> ${totalAmount.toLocaleString()}
   `;
 }
