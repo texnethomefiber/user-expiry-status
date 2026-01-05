@@ -150,6 +150,61 @@
 </style>
 </head>
 <body>
+  <div id="loginScreen" style="
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+">
+  <div style="
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    width: 320px;
+    text-align: center;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  ">
+    <h2 style="margin-bottom: 10px;">TEXNET LOGIN</h2>
+    <p style="font-size: 14px; color: #666;">Admin Access Only</p>
+
+    <input
+      type="password"
+      id="passwordInput"
+      placeholder="Enter password"
+      style="
+        width: 100%;
+        padding: 10px;
+        margin: 15px 0;
+        border-radius: 5px;
+        border: 1px solid #ccc;
+      "
+    />
+
+    <button
+      onclick="checkPassword()"
+      style="
+        width: 100%;
+        padding: 10px;
+        background: #3498db;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 15px;
+      "
+    >
+      Login
+    </button>
+
+    <p id="loginError" style="color: red; font-size: 13px; display: none; margin-top: 10px;">
+      Incorrect password
+    </p>
+  </div>
+</div>
+<div id="dashboardContent" style="display:none;">
   <div class="header-box">
     <h1>TEXNET HOME FIBER</h1>
     <p>User Expiry Status</p>
@@ -490,6 +545,32 @@ We sincerely apologize for the inconvenience and thank you for your patience.
       .catch(() => alert("Failed to copy outage message. Please try again."));
   });
 </script>
+  <script>
+  const DASHBOARD_PASSWORD = "Texnet@2025"; // 🔐 CHANGE THIS
+
+  function showDashboard() {
+    document.getElementById("loginScreen").style.display = "none";
+    document.getElementById("dashboardContent").style.display = "block";
+  }
+
+  function checkPassword() {
+    const input = document.getElementById("passwordInput").value;
+    if (input === DASHBOARD_PASSWORD) {
+      localStorage.setItem("texnet_logged_in", "yes");
+      showDashboard();
+    } else {
+      document.getElementById("loginError").style.display = "block";
+    }
+  }
+
+  window.addEventListener("load", () => {
+    if (localStorage.getItem("texnet_logged_in") === "yes") {
+      showDashboard();
+    }
+  });
+</script>
+
+</div>
 
 </body>
 </html>
