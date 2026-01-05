@@ -220,6 +220,19 @@
   <select id="locationFilter">
     <option value="">All Locations</option>
   </select>
+    <button onclick="logout()" style="
+  float:right;
+  margin-top:-40px;
+  padding:8px 14px;
+  background:#e74c3c;
+  color:white;
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
+">
+  Logout
+</button>
+
   <button id="exportPhones" style="padding: 8px 12px; background: #2ecc71; color: white; border: none; border-radius: 5px; cursor: pointer;">
     📤 Export Numbers
   </button>
@@ -546,15 +559,21 @@ We sincerely apologize for the inconvenience and thank you for your patience.
   });
 </script>
   <script>
-  const DASHBOARD_PASSWORD = "Ausco@Texnet@2025"; // 🔐 CHANGE THIS
+  const DASHBOARD_PASSWORD = "Texnet@2025"; // 🔐 CHANGE IF NEEDED
 
   function showDashboard() {
     document.getElementById("loginScreen").style.display = "none";
     document.getElementById("dashboardContent").style.display = "block";
   }
 
+  function showLogin() {
+    document.getElementById("loginScreen").style.display = "flex";
+    document.getElementById("dashboardContent").style.display = "none";
+  }
+
   function checkPassword() {
     const input = document.getElementById("passwordInput").value;
+
     if (input === DASHBOARD_PASSWORD) {
       localStorage.setItem("texnet_logged_in", "yes");
       showDashboard();
@@ -563,14 +582,19 @@ We sincerely apologize for the inconvenience and thank you for your patience.
     }
   }
 
-  window.addEventListener("load", () => {
+  function logout() {
+    localStorage.removeItem("texnet_logged_in");
+    showLogin();
+  }
+
+  // 🔴 FORCE LOGIN CHECK ON PAGE LOAD
+  window.addEventListener("DOMContentLoaded", () => {
     if (localStorage.getItem("texnet_logged_in") === "yes") {
       showDashboard();
+    } else {
+      showLogin();
     }
   });
 </script>
-
-</div>
-
 </body>
 </html>
