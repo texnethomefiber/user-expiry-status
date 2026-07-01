@@ -342,32 +342,40 @@ function renderTable(data) {
     const statusClass = row.Status.toLowerCase().replace(/\s+/g, "-");
     const tr = document.createElement("tr");
 
-    const phone = normalizePhone(row.Phone); // 07XXXXXXXX
-const whatsappPhone = phone.replace(/^0/, "254"); // 2547XXXXXXXX for WhatsApp
+    const phone = normalizePhone(row.Phone); // 07XXXXXXXX or 01XXXXXXXX
+    const whatsappPhone = phone.replace(/^0/, "254"); // 254... for WhatsApp
 
     const status = row.Status;
     const expiry = row["Expiry Date"] || "";
     const expiryFormatted = formatExpiryDate(expiry);
+    const name = row.Name || "";
+    const accountName = name.toUpperCase(); // Forces Account Name to UPPERCASE
 
-    let message = "Dear Client,";
+    // 📢 DRAFTING THE PAYMENT CHANGE NOTIFICATION MESSAGE
+    let message = `Dear Client,\n\nPlease note that TEXNET HOME FIBER has updated its payment account details. Moving forward, use these credentials to ensure instant subscription activation:\n\n`;
+    message += `🔹 PAYBILL: 4112723\n`;
+    message += `🔹 ACCOUNT NUMBER: ${accountName}\n\n`;
 
     if (status === "Active") {
-      message += ` thank you for staying connected with TEXNET HOME FIBER. Your subscription is active and will expire on ${expiryFormatted}.`;
+      message += `Your subscription is currently ACTIVE and will expire on ${expiryFormatted}.`;
     } else if (status === "Expired") {
-      message += ` your TEXNET HOME FIBER subscription expired on ${expiryFormatted}.`;
+      message += `Your subscription expired on ${expiryFormatted}. Please update your account to restore connection.`;
     } else if (status === "Expiring Soon") {
-      message += ` your TEXNET HOME FIBER subscription is expiring soon on ${expiryFormatted}.`;
+      message += `Your subscription is expiring soon on ${expiryFormatted}.`;
     } else {
-      message += ` we could not determine your subscription status.`;
+      message += `We could not determine your precise subscription status.`;
     }
 
-    message += `\n\nFor payments:\nPAYBILL: 222111\nACCOUNT NUMBER: 162238\n\nThank you for choosing TEXNET.`;
+    message += `\n\nThank you for choosing TEXNET.`;
 
     const encodedMessage = encodeURIComponent(message);
     const messageLink = `https://wa.me/${whatsappPhone}?text=${encodedMessage}`;
 
+    // Escape any unexpected single quotes in client names for the fallback trigger function safely
+    const escapedName = name.replace(/'/g, "\\'");
+
     tr.innerHTML = `
-      <td>${row.Name || ""}</td>
+      <td>${name}</td>
       <td>${phone}</td>
       <td>${row.Amount || ""}</td>
       <td>${row.Location || ""}</td>
@@ -380,6 +388,7 @@ const whatsappPhone = phone.replace(/^0/, "254"); // 2547XXXXXXXX for WhatsApp
     tableBody.appendChild(tr);
   });
 }
+
     function renderTotals(data) {
   const totalsBox = document.getElementById("totalsBox");
 
